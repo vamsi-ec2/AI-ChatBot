@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>🤖 My AI ChatBot</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Custom scroll for chat */
+    #chat::-webkit-scrollbar {
+      width: 8px;
+    }
+    #chat::-webkit-scrollbar-thumb {
+      background-color: rgba(0,0,0,0.3);
+      border-radius: 4px;
+    }
+    #chat::-webkit-scrollbar-track {
+      background: transparent;
+    }
+  </style>
+</head>
+<body class="h-screen w-screen flex items-center justify-center bg-cover bg-center" 
+      style="background-image: url('https://images.unsplash.com/photo-1581091012184-6c1b7de7e0d3?auto=format&fit=crop&w=1600&q=80');">
+  <div class="w-full max-w-md bg-white bg-opacity-90 rounded-3xl shadow-lg flex flex-col h-5/6">
+    
+    <h1 class="text-2xl font-bold text-center mt-4">🤖 My AI ChatBot</h1>
+    
+    <!-- Chat messages container -->
+    <div id="chat" class="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-transparent">
+      <!-- Messages will appear here -->
+    </div>
+
+    <!-- Input box -->
+    <form id="chat-form" class="flex p-4 gap-2">
+      <input id="user-input" class="flex-1 border rounded-l-xl p-2 focus:outline-none" 
+             type="text" placeholder="Type a message..." autocomplete="off"/>
+      <button class="bg-blue-600 text-white px-4 py-2 rounded-r-xl hover:bg-blue-700">Send</button>
+    </form>
+  </div>
+
+  <script>
+    const form = document.getElementById("chat-form");
+    const input = document.getElementById("user-input");
+    const chat = document.getElementById("chat");
+
+    function appendMessage(sender, text){
+      const div = document.createElement("div");
+      div.className = "flex " + (sender==="You" ? "justify-end" : "justify-start");
+      div.innerHTML = `
+        <div class="max-w-xs px-4 py-2 rounded-2xl ${sender==="You" ? "bg-blue-500 text-white" : "bg-gray-200 text-black"}">
+          <strong>${sender}:</strong> ${text}
+        </div>
+      `;
+      chat.appendChild(div);
+    }
+
+    function scrollToBottom(force=false){
+      if(force || chat.scrollHeight - chat.scrollTop - chat.clientHeight < 50){
+        chat.scrollTop = chat.scrollHeight;
+      }
+    }
+
+    form.addEventListener("submit", async (e)=>{
+      e.preventDefault();
+      const msg = input.value.trim();
+      if(!msg) return;
+      appendMessage("You", msg);
+      input.value = "";
+
+      appendMessage("Bot", "⌛ Thinking...");
+      scrollToBottom(true);
+
+      try{
+        const res = await fetch("/get", {
+          method:"POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({msg})
+        });
+        const data = await res.json();
+        // remove last "Thinking..."
+        chat.lastChild.remove();
+        appendMessage("Bot", data.reply);
+        scrollToBottom();
+      }catch(err){
+        chat.lastChild.remove();
+        appendMessage("Bot", "⚠️ Error: " + err.message);
+        scrollToBottom();
+      }
+    });
+
+    // Allow scrolling without auto-jumping if user scrolls up
+    chat.addEventListener("scroll", ()=>{
+      // Only auto-scroll if near bottom
+      // Handled in scrollToBottom function
+    });
+  </script>
+</body>
+</html>
